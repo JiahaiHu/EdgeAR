@@ -15,141 +15,84 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.concurrent.CountDownLatch;
 
-public class Mytask extends Thread{
-    private Thread t;
-    private String threadName = "test";
-    private String serverIP = "192.168.31.67";
-    private int serverPort = 8999;
-    private String PhotoPath="/Download/images";
+public class MyTask extends Thread{
+    private String serverIP;
+    private int serverPort;
+    private String imagePath;
     private int currentIndex;
-    private String myUUID;
     private String nowTime;
     private CountDownLatch latch;
     private int certainIndex = 0;
 
-    public Mytask(int index, String uuid) {
-        currentIndex = index;
-        myUUID = uuid;
-    }
-
-    public Mytask(String name, String IP, int port, String path, int index, String uuid, String now, CountDownLatch cdl) {
-        threadName = name;
+    public MyTask(String IP, int port, String path, int index, String now, CountDownLatch cdl) {
         serverIP = IP;
         serverPort = port;
-        PhotoPath = path;
+        imagePath = path;
         currentIndex = index;
-        myUUID = uuid;
         nowTime = now;
         latch = cdl;
-    }
-
-    public Mytask(){
-
     }
 
     @Override
     public void run() {
 
-        Log.e("INFO: ", currentIndex + " : run: a task is running");
-
         try {
             Socket socket = new Socket(serverIP, serverPort);
             // socket.setKeepAlive(true);
 
-
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-            String fileDirPath = Environment.getExternalStorageDirectory().toString()  + PhotoPath;
+            String fileDirPath = Environment.getExternalStorageDirectory().toString()  + imagePath;
             File fileDir = new File(fileDirPath);
 
-            File[] tmpList = fileDir.listFiles();
-            assert tmpList != null;
-            Log.i("INFO", "run: " + tmpList.length);
+            File[] fileList = fileDir.listFiles();
+            assert fileList != null;
 
-//            for (int i = 0; i< Objects.requireNonNull(tmpList).length; i++){
-//                if(tmpList[i].isFile()) {
-//                    Log.d("INFO", "run: " + tmpList[i].toString());
-//                }
-//            }
-
-            // first send the size of img
-            int fileLength = (int) tmpList[certainIndex].length();
-
-            byte[] fileLengthByte = toHH(fileLength);
-
-            Log.w("warning", "run: " + fileLength );
-            Log.w("warning", "run: " + Arrays.toString(fileLengthByte));
+            // send the size of image
+            int fileLength = (int) fileList[certainIndex].length();
+            Log.d("MyTask", "image file path: " + fileList[certainIndex].toString());
+            byte[] fileLengthByte = bigEndian(fileLength);
+            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
             out.write(fileLengthByte);
 
-            Log.e("stage", "cur-"+currentIndex + " run: 1");
-            FileInputStream in =  new FileInputStream(tmpList[certainIndex].toString());
-
-            Log.e("stage", "cur-"+currentIndex+ " run: 1.5, the next is read" );
+            // read image
+            FileInputStream in =  new FileInputStream(fileList[certainIndex].toString());
             byte[] buf = new byte[fileLength];
             int len = in.read(buf);
 
-
+            // send image to server
             long timeStampBegin = System.currentTimeMillis();
-            String sndTimeBegin = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date());
-
-            // while(true) {
-
-            Log.e("stage", "cur-" + currentIndex + " run: 1.7, the next is write, the len: " + len);
-//                if(len == -1){
-//                    break;
-//                }
+            String sendTimeBegin = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date());
             out.write(buf, 0, len);
             out.flush();
-            String sndTimeEnd = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date());
-            // }
-            Log.e("stage", "cur-"+currentIndex + " run: 2");
-
+            String sendTimeEnd = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date());
 
             socket.shutdownOutput();
-            Log.e("stage", "cur: " + currentIndex + " run: upload image success");
+            Log.i("MyTask", "index: " + currentIndex + " run: upload image success");
 
-
-
-
-//            // receive
+            // receive result from server
             try (BufferedReader socket_in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+                Log.d("MyTask", "start receiving result from server");
                 StringBuilder msg = new StringBuilder();
-                char[] cbuf = new char[1024];
-                len = 0;
 
-
-                MyLog myLog = new MyLog(nowTime, currentIndex);
-
-                while (true){
+                while (true) {
                     String newMsg = socket_in.readLine();
-                    Log.e("info", "cur: " + currentIndex + "run: try to read from socket" + "len: " + newMsg);
-                    if(newMsg == null){
-                        Log.e("info", "cur: " + currentIndex + "run: newMsg is null");
+                    if (newMsg == null) {
                         break;
                     }
                     msg.append(newMsg);
                 }
+//                Log.d("MyTask", "result: " + msg.toString());
 
-//                while((len=socket_in.read(cbuf, 0, 1024))!=-1) {
-//                    msg.append(new String(cbuf, 0, len));
-//                }
-
-                Log.e("info", "cur: " + currentIndex + "run: try to record to log");
-
-
+                // write result to log file
                 long timeStampEnd = System.currentTimeMillis();
-                String timeMsg =  currentIndex + "," + sndTimeBegin + "," + sndTimeEnd + "," + timeStampBegin + "," + timeStampEnd + "," + (timeStampEnd - timeStampBegin) ;
-                myLog.writeFileToLog(timeMsg);
-                Log.e("info: ", msg.toString());
-
-                // msg is ignored
-                //myLog.writeFileToLog(msg.toString());
-
+                String timeMsg =  currentIndex + "," + sendTimeBegin + "," + sendTimeEnd + "," + timeStampBegin + "," + timeStampEnd + "," + (timeStampEnd - timeStampBegin) ;
+                MyLog myLog = new MyLog(nowTime, currentIndex);
+//                myLog.writeFileToLog(timeMsg);
             }
 
             in.close();
             out.close();
             socket.close();
-            Log.e("INFO: ", currentIndex + " : run: a task is completed");
+            Log.i("MyTask", currentIndex + " task is completed");
             latch.countDown();
 
         } catch (IOException e) {
@@ -157,23 +100,8 @@ public class Mytask extends Thread{
         }
     }
 
-    public void start() {
-        if (t==null) {
-            t = new Thread(this, threadName);
-            t.start();
-        }
-    }
-
-    public static byte[] toLH(int n) {
-        byte[] b = new byte[4];
-        b[0] = (byte) (n & 0xff);
-        b[1] = (byte) (n >> 8 & 0xff);
-        b[2] = (byte) (n >> 16 & 0xff);
-        b[3] = (byte) (n >> 24 & 0xff);
-        return b;
-    }
-
-    public static byte[] toHH(int n) {
+    // convert to big-endian byte order
+    public static byte[] bigEndian(int n) {
         byte[] b = new byte[4];
         b[3] = (byte) (n & 0xff);
         b[2] = (byte) (n >> 8 & 0xff);

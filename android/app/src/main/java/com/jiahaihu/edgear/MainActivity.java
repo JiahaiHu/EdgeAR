@@ -34,58 +34,55 @@ public class MainActivity extends AppCompatActivity {
 
         TextView textView = findViewById(R.id.textView);
 
-        btn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String ip = ipInput.getText().toString();
-                int port = Integer.parseInt(portInput.getText().toString());
-                int numberOfFrames = Integer.parseInt(numberInput.getText().toString());
-                int timeInterval = Integer.parseInt(timeIntervalInput.getText().toString());
+        btn.setOnClickListener(view -> {
+            String ip = ipInput.getText().toString();
+            int port = Integer.parseInt(portInput.getText().toString());
+            int numberOfFrames = Integer.parseInt(numberInput.getText().toString());
+            int timeInterval = Integer.parseInt(timeIntervalInput.getText().toString());
 
-                // Get the server's ip and port,
-                // use the async methods to send the requests at a fixed interval
+            // Get the server's ip and port,
+            // use the async methods to send the requests at a fixed interval
 
-                String displayString = ip + port + numberOfFrames;
-                textView.setText(displayString);
+            String displayString = ip + port + numberOfFrames;
+            textView.setText(displayString);
 
-                final CountDownLatch cdl = new CountDownLatch(numberOfFrames);
+            final CountDownLatch cdl = new CountDownLatch(numberOfFrames);
 
-                // read the numbers of frames
-                Date nowTime = new Date();
-                String now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(nowTime);
+            // send frames at a fixed interval
+            Date nowTime = new Date();
+            String now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(nowTime);
 
-                Mytask[]  tasks= new Mytask[numberOfFrames];
-                for(int i=0; i<numberOfFrames; i++){
-                    tasks[i] = new Mytask("test", ip, port, "/Download/images",i, "0", now, cdl);
-                }
+            MyTask[] tasks = new MyTask[numberOfFrames];
+            for (int i=0; i<numberOfFrames; i++) {
+                tasks[i] = new MyTask(ip, port, "/Download/images", i, now, cdl);
+            }
 
+//            try {
+//                Thread.sleep(3000);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+
+            tasks[0].start();
+
+            for (int i=1; i<numberOfFrames; i++) {
                 try {
-                    Thread.sleep(3000);
+                    Thread.sleep(timeInterval);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+                tasks[i].start();
+            }
 
-                tasks[0].start();
-
-                // at a fixed intervals
-                for(int i=1;i<numberOfFrames; i++){
-                    try {
-                        Thread.sleep(timeInterval);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    tasks[i].start();
+            Log.i("onClick", "all tasks are running");
+            for(int i=0; i<numberOfFrames; i++) {
+                try {
+                    tasks[i].join();
+                    Log.i("onClick", i + " completed" );
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-
-                Log.e("main:", "all tasks are running");
-                for(int i=0; i<numberOfFrames; i++) {
-                    try {
-                        tasks[i].join();
-                        Log.e("TAG", "onClick: " + i + " completed" );
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
+            }
 
 //                try {
 //                    cdl.await();
@@ -93,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
 //                    e.printStackTrace();
 //                }
 
-                Log.e("INFO: ", "onClick: tasks finished");
+            Log.i("onClick", "tasks finished");
 
 //                try {
 //                    Thread.sleep(1000);
@@ -101,16 +98,15 @@ public class MainActivity extends AppCompatActivity {
 //                    e.printStackTrace();
 //                }
 
-                // arrange the logs
-                try {
-                    MyLog.mergeFileLog(now);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+            // arrange the logs
+//            try {
+//                MyLog.mergeFileLog(now);
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
 
-                Log.e("INFO: ", "onClick: merge logs finished");
+//            Log.e("INFO: ", "onClick: merge logs finished");
 
-            }
         });
 
     }

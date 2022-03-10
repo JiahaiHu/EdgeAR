@@ -31,23 +31,20 @@ public class MyLog {
         FILE_NAME = nowTime + "-" + index;
 
         File externalDir = Environment.getExternalStorageDirectory();
-        Log.d(" ", "writeFileTolog: the external Dirs is: " + externalDir.toString());
 
         MYLOG_PATH_DIR = externalDir.toString() + MYLOG_PATH_DIR;
         File dirsFile = new File(MYLOG_PATH_DIR);
-        Log.d(" ", "writeFileTolog: the external Dirs is: " + MYLOG_PATH_DIR);
 
-        if(!dirsFile.exists()) {
-            Log.d(" ", "writeFileToLog: try to create dirs");
+        if (!dirsFile.exists()) {
+            Log.d("MyLog", "writeFileToLog: try to create dirs");
             dirsFile.createNewFile();
-        } else{
-            Log.d(" ", "writeFileToLog: dirsFile exists");
+        } else {
+            Log.d("MyLog", "writeFileToLog: dirsFile exists");
         }
 
         File logFile = new File(dirsFile.toString(), this.FILE_NAME+MYLOG_SUFFIX);
-        Log.d(" ", "writeFileToLog: " + logFile.toString());
-        if(!logFile.exists()) {
-            Log.d(" ", "writeFileToLog: try to create files");
+        if (!logFile.exists()) {
+            Log.d("MyLog", "writeFileToLog: try to create files");
             logFile.createNewFile();
         }
 
@@ -64,7 +61,7 @@ public class MyLog {
         bufWriter.newLine();
         bufWriter.close();
         filerWriter.close();
-        Log.i("INFO", "writeFileToLog: success writing a file");
+        Log.i("MyLog", "writeFileToLog: success writing a file");
     }
 
 
@@ -73,8 +70,8 @@ public class MyLog {
         File dirsFile = new File(dir);
         File[] tmpList = dirsFile.listFiles();
 
-        if(tmpList == null) {
-            Log.e("error", "mergeFileLog: the logs dir is empty ");
+        if (tmpList == null) {
+            Log.e("MyLog", "mergeFileLog: the logs dir is empty ");
             return;
         }
 
@@ -82,7 +79,7 @@ public class MyLog {
         List fileList = Arrays.asList(tmpList);
         Collections.sort(fileList, new Comparator<File>() {
             @Override
-            public int compare(File o1, File o2){
+            public int compare(File o1, File o2) {
                 if (o1.isDirectory() && o2.isFile())
                     return -1;
                 if (o1.isFile() && o2.isDirectory())
@@ -92,22 +89,22 @@ public class MyLog {
         });
 
         String fileOutName = dir + subTitle + ".txt";
-        Log.d("TAG", "mergeFileLog: " + fileOutName);
+        Log.d("MyLog", "mergeFileLog: " + fileOutName);
         File fileOut = new File(fileOutName);
 
-        if(!fileOut.exists()) {
-            Log.d(" ", "mergeFileLog: try to create files");
+        if (!fileOut.exists()) {
+            Log.d("MyLog", "mergeFileLog: try to create files");
             fileOut.createNewFile();
         }
 
         BufferedWriter bw = new BufferedWriter(new FileWriter(fileOutName));
 
         for (Object f: fileList) {
-            if(((File) f).getName().contains(subTitle)){
-                Log.e("TAG", "mergeFileLog: " + ((File) f).getName());
+            if (((File) f).getName().contains(subTitle)) {
+                Log.e("MyLog", "mergeFileLog: " + ((File) f).getName());
                 BufferedReader br = new BufferedReader(new FileReader((File) f));
                 String line;
-                while((line= br.readLine()) != null) {
+                while ((line= br.readLine()) != null) {
                     bw.write(line);
                     bw.newLine();
                 }
@@ -118,7 +115,7 @@ public class MyLog {
             }
         }
         bw.close();
-        Log.e("TAG", "mergeFileLog: file merge ends" );
+        Log.e("MyLog", "mergeFileLog: file merge ends" );
     }
 
 }
