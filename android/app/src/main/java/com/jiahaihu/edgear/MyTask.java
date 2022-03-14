@@ -19,18 +19,15 @@ public class MyTask extends Thread{
     private String serverIP;
     private int serverPort;
     private String imagePath;
-    private int currentIndex;
-    private String nowTime;
-    private CountDownLatch latch;
-    private int certainIndex = 0;
+    private int numberOfFrames;
+    private int interval;
 
-    public MyTask(String IP, int port, String path, int index, String now, CountDownLatch cdl) {
+    public MyTask(String IP, int port, String path, int n, int fps) {
         serverIP = IP;
         serverPort = port;
         imagePath = path;
-        currentIndex = index;
-        nowTime = now;
-        latch = cdl;
+        numberOfFrames = n;
+        interval = (int) 1000/fps;
     }
 
     @Override
@@ -38,7 +35,9 @@ public class MyTask extends Thread{
 
         try {
             Socket socket = new Socket(serverIP, serverPort);
-            // socket.setKeepAlive(true);
+            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+
+//            socket.setKeepAlive(true);
 
             String fileDirPath = Environment.getExternalStorageDirectory().toString()  + imagePath;
             File fileDir = new File(fileDirPath);
@@ -46,54 +45,76 @@ public class MyTask extends Thread{
             File[] fileList = fileDir.listFiles();
             assert fileList != null;
 
-            // send the size of image
-            int fileLength = (int) fileList[certainIndex].length();
-            Log.d("MyTask", "image file path: " + fileList[certainIndex].toString());
-            byte[] fileLengthByte = bigEndian(fileLength);
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-            out.write(fileLengthByte);
+            Date now = new Date();
+            MyLog myLog = new MyLog(now.toString());
 
-            // read image
-            FileInputStream in =  new FileInputStream(fileList[certainIndex].toString());
-            byte[] buf = new byte[fileLength];
-            int len = in.read(buf);
+            for (int i=0; i<numberOfFrames; i++) {
+                try {
+                    Thread.sleep(interval);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                // send the size of image
+                int fileLength = (int) fileList[0].length();
+                Log.d("MyTask", "image file path: " + fileList[0].toString());
+                Log.d("MyTask", "image file size: " + fileLength);
 
-            // send image to server
-            long timeStampBegin = System.currentTimeMillis();
-            String sendTimeBegin = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date());
-            out.write(buf, 0, len);
-            out.flush();
-            String sendTimeEnd = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date());
 
-            socket.shutdownOutput();
-            Log.i("MyTask", "index: " + currentIndex + " run: upload image success");
+                // read image
+                FileInputStream in =  new FileInputStream(fileList[0].toString());
+                byte[] buf = new byte[fileLength];
+                int len = in.read(buf, 0, fileLength);
+                Log.d("MyTask", "read return: " + len);
 
-            // receive result from server
-            try (BufferedReader socket_in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+                // send image to server
+                byte[] fileLengthByte = bigEndian(fileLength);
+                out.write(fileLengthByte);
+                out.flush();
+                long timeStampBegin = System.currentTimeMillis();
+                String sendTimeBegin = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date());
+                out.write(buf, 0, fileLength);
+                out.flush();
+                String sendTimeEnd = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(new Date());
+
+//                socket.shutdownOutput();
+                Log.i("MyTask", "index: " + i + " run: upload image success");
+
+                // receive result from server
+                BufferedReader socket_in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 Log.d("MyTask", "start receiving result from server");
                 StringBuilder msg = new StringBuilder();
 
                 while (true) {
+                    Log.i("MyTask", "start readline");
                     String newMsg = socket_in.readLine();
                     if (newMsg == null) {
                         break;
                     }
+                    Log.d("MyTask", "newMsg: " + newMsg);
                     msg.append(newMsg);
+
+                    String end = newMsg.substring(newMsg.length()-2);
+                    Log.d("MyTask", "end: " + end);
+                    if (end.equals("**")) {
+                        break;
+                    }
                 }
-//                Log.d("MyTask", "result: " + msg.toString());
+                Log.d("MyTask", "result: " + msg.toString());
+                String result = msg.substring(0, msg.length()-2);
 
                 // write result to log file
                 long timeStampEnd = System.currentTimeMillis();
-                String timeMsg =  currentIndex + "," + sendTimeBegin + "," + sendTimeEnd + "," + timeStampBegin + "," + timeStampEnd + "," + (timeStampEnd - timeStampBegin) ;
-                MyLog myLog = new MyLog(nowTime, currentIndex);
-//                myLog.writeFileToLog(timeMsg);
+//                String timeMsg =  i + "," + sendTimeBegin + "," + sendTimeEnd + "," + timeStampBegin + "," + timeStampEnd + "," + (timeStampEnd - timeStampBegin);
+                String timeMsg =  i + "," + (timeStampEnd - timeStampBegin);
+                Log.d("MyTask", "timeMsg: " + timeMsg);
+
+                myLog.writeFileToLog(timeMsg);
+                in.close();
             }
 
-            in.close();
             out.close();
             socket.close();
-            Log.i("MyTask", currentIndex + " task is completed");
-            latch.countDown();
+            Log.i("MyTask", "task is completed");
 
         } catch (IOException e) {
             e.printStackTrace();

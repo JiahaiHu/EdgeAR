@@ -27,8 +27,8 @@ public class MyLog {
         this.FILE_NAME = myLogSdf.format(nowTime);
     }
 
-    public MyLog(String nowTime, int index) throws IOException {
-        FILE_NAME = nowTime + "-" + index;
+    public MyLog(String filename) throws IOException {
+        FILE_NAME = filename;
 
         File externalDir = Environment.getExternalStorageDirectory();
 
@@ -47,7 +47,6 @@ public class MyLog {
             Log.d("MyLog", "writeFileToLog: try to create files");
             logFile.createNewFile();
         }
-
     }
 
     public void writeFileToLog(String text) throws IOException {
@@ -63,7 +62,6 @@ public class MyLog {
         filerWriter.close();
         Log.i("MyLog", "writeFileToLog: success writing a file");
     }
-
 
     public static void mergeFileLog(String subTitle) throws IOException {
         String dir = "/storage/emulated/0/Download/logs/";
@@ -117,5 +115,4 @@ public class MyLog {
         bw.close();
         Log.e("MyLog", "mergeFileLog: file merge ends" );
     }
-
 }

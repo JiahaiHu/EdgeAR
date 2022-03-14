@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
             String ip = ipInput.getText().toString();
             int port = Integer.parseInt(portInput.getText().toString());
             int numberOfFrames = Integer.parseInt(numberInput.getText().toString());
-            int timeInterval = Integer.parseInt(timeIntervalInput.getText().toString());
+            int fps = Integer.parseInt(timeIntervalInput.getText().toString());
 
             // Get the server's ip and port,
             // use the async methods to send the requests at a fixed interval
@@ -46,16 +46,12 @@ public class MainActivity extends AppCompatActivity {
             String displayString = ip + port + numberOfFrames;
             textView.setText(displayString);
 
-            final CountDownLatch cdl = new CountDownLatch(numberOfFrames);
-
-            // send frames at a fixed interval
             Date nowTime = new Date();
             String now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(nowTime);
 
-            MyTask[] tasks = new MyTask[numberOfFrames];
-            for (int i=0; i<numberOfFrames; i++) {
-                tasks[i] = new MyTask(ip, port, "/Download/images", i, now, cdl);
-            }
+            MyTask task = new MyTask(ip, port, "/Download/images", numberOfFrames, fps);
+            task.start();
+            Log.i("onClick", "task started");
 
 //            try {
 //                Thread.sleep(3000);
@@ -63,34 +59,12 @@ public class MainActivity extends AppCompatActivity {
 //                e.printStackTrace();
 //            }
 
-            tasks[0].start();
-
-            for (int i=1; i<numberOfFrames; i++) {
-                try {
-                    Thread.sleep(timeInterval);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                tasks[i].start();
+            try {
+                task.join();
+                Log.i("onClick", "task completed" );
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-
-            Log.i("onClick", "all tasks are running");
-            for(int i=0; i<numberOfFrames; i++) {
-                try {
-                    tasks[i].join();
-                    Log.i("onClick", i + " completed" );
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-
-//                try {
-//                    cdl.await();
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-
-            Log.i("onClick", "tasks finished");
 
 //                try {
 //                    Thread.sleep(1000);
