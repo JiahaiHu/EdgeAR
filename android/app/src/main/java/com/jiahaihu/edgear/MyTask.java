@@ -58,12 +58,12 @@ public class MyTask extends Thread{
                         e.printStackTrace();
                     }
 
-                    int fileLength = (int) fileList[0].length();
-                    Log.d("frameSender", "image file path: " + fileList[0].toString());
+                    int fileLength = (int) fileList[i].length();
+                    Log.d("frameSender", "image file path: " + fileList[i].toString());
                     Log.d("frameSender", "image file size: " + fileLength);
 
                     // read image
-                    FileInputStream in =  new FileInputStream(fileList[0].toString());
+                    FileInputStream in =  new FileInputStream(fileList[i].toString());
                     byte[] buf = new byte[fileLength];
                     int len = in.read(buf, 0, fileLength);
                     Log.d("frameSender", "read return: " + len);
