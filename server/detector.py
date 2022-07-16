@@ -292,7 +292,7 @@ def handle(clientsocket, q_frame_gpu0, index, c1, c2, worker_pid, q_result):
     img_str = bytes()
     # tmp_size = 102400
     while cur_size < img_strlen:
-        tmp_str = clientsocket.recv(img_strlen)  # 读取图片数据
+        tmp_str = clientsocket.recv(img_strlen - cur_size)  # 读取图片数据
         img_str += tmp_str
         cur_size += len(tmp_str)
         # print(datetime.now().strftime('%H:%M:%S.%f')[:-3], index, "current size is: ", cur_size)
