@@ -17,7 +17,7 @@ import java.util.Date;
 import java.util.List;
 
 public class MyLog {
-    private String MYLOG_PATH_DIR = "/Download/logs/";
+    private String MYLOG_PATH_DIR = "/Download/EdgeAR/logs/";
     private static String MYLOG_SUFFIX = ".txt";
     private String FILE_NAME;
     private static SimpleDateFormat myLogSdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -37,7 +37,7 @@ public class MyLog {
 
         if (!dirsFile.exists()) {
             Log.d("MyLog", "writeFileToLog: try to create dirs");
-            dirsFile.createNewFile();
+            dirsFile.mkdirs();
         } else {
             Log.d("MyLog", "writeFileToLog: dirsFile exists");
         }
