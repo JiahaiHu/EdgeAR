@@ -245,37 +245,42 @@ def detect_frame_gpu0(q_frame_gpu0, c1, c2, q_result):
 
     print('finish loading network')
 
-    print("receiving the fd...")
-    fd = recv_handle(c1)
-    print(f"get the fd {fd}")
-    c = socket.socket(socket.AF_INET, socket.SOCK_STREAM, fileno=fd)
-
     while True:
-        print("getting frame from queue...")
-        [img_str, frame_count] = q_frame_gpu0.get(True)
-        print("finish getting frame")
-        # print(datetime.now().strftime('%H:%M:%S.%f')[:-3], 'the queue receive frame', frame_count, '\n')
-        img_array = np.fromstring(img_str, dtype='uint8')  # 转换成array
-        img_decoded = cv2.imdecode(img_array, 1)  # 解压图片,img为array格式
+        print("receiving the fd...")
+        fd = recv_handle(c1)
+        print(f"get the fd {fd}")
+        c = socket.socket(socket.AF_INET, socket.SOCK_STREAM, fileno=fd)
 
-        im = nparray_to_image(img_decoded)
-        r = detect(net1, meta, im)
-        r_json = demjson.encode(r)  # r_json类型为str
-        r_json += '**\n'
-        # print(r_json)
-        # str_rJsonLen_resolutionNum_imgID_rJson = \
-        #     struct.pack('h', len(r_json)) + bytes(r_json, encoding="utf8")
-        str_rJsonLen_resolutionNum_imgID_rJson = bytes(r_json, encoding="utf8")
+        while True:
+            print(c.fileno())
+            print("getting frame from queue...")
+            [img_str, frame_count] = q_frame_gpu0.get(True)
+            if frame_count == -1:
+                break
+            print("finish getting frame")
+            # print(datetime.now().strftime('%H:%M:%S.%f')[:-3], 'the queue receive frame', frame_count, '\n')
+            img_array = np.fromstring(img_str, dtype='uint8')  # 转换成array
+            img_decoded = cv2.imdecode(img_array, 1)  # 解压图片,img为array格式
 
-        c.send(str_rJsonLen_resolutionNum_imgID_rJson)  # 把识别结果返回给client
-        q_result.put([frame_count, 2, datetime.now().strftime('%H:%M:%S.%f')[:-3]])
-        print(datetime.now().strftime('%H:%M:%S.%f')[:-3], 'return result of ', frame_count, '\n')
+            im = nparray_to_image(img_decoded)
+            r = detect(net1, meta, im)
+            r_json = demjson.encode(r)  # r_json类型为str
+            r_json += '**\n'
+            # print(r_json)
+            # str_rJsonLen_resolutionNum_imgID_rJson = \
+            #     struct.pack('h', len(r_json)) + bytes(r_json, encoding="utf8")
+            str_rJsonLen_resolutionNum_imgID_rJson = bytes(r_json, encoding="utf8")
+
+            c.send(str_rJsonLen_resolutionNum_imgID_rJson)  # 把识别结果返回给client
+            q_result.put([frame_count, 2, datetime.now().strftime('%H:%M:%S.%f')[:-3]])
+            print(datetime.now().strftime('%H:%M:%S.%f')[:-3], 'return result of ', frame_count, '\n')
 
 
 def handle(clientsocket, q_frame_gpu0, index, c1, c2, worker_pid, q_result):
     print("receiving image length...")
     len_bytes = clientsocket.recv(4)
     if len(len_bytes) == 0: # socket connection is closed
+        q_frame_gpu0.put([bytes(), -1]) # end of a sequence of frames
         return -1
 
     img_strlen = struct.unpack('>I', len_bytes)[0]
