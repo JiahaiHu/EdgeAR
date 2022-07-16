@@ -252,16 +252,13 @@ def detect_frame_gpu0(q_frame_gpu0, c1, c2, q_result):
 
     while True:
         print("getting frame from queue...")
-        # [img_str, frame_count, c] = q_frame_gpu0.get(True)
         [img_str, frame_count] = q_frame_gpu0.get(True)
         print("finish getting frame")
-        # print(img_str[:1000])
         # print(datetime.now().strftime('%H:%M:%S.%f')[:-3], 'the queue receive frame', frame_count, '\n')
         img_array = np.fromstring(img_str, dtype='uint8')  # 转换成array
         img_decoded = cv2.imdecode(img_array, 1)  # 解压图片,img为array格式
 
         im = nparray_to_image(img_decoded)
-        # print('img', frame_count, 'frame', im)
         r = detect(net1, meta, im)
         r_json = demjson.encode(r)  # r_json类型为str
         r_json += '**\n'
@@ -270,41 +267,32 @@ def detect_frame_gpu0(q_frame_gpu0, c1, c2, q_result):
         #     struct.pack('h', len(r_json)) + bytes(r_json, encoding="utf8")
         str_rJsonLen_resolutionNum_imgID_rJson = bytes(r_json, encoding="utf8")
 
-
         c.send(str_rJsonLen_resolutionNum_imgID_rJson)  # 把识别结果返回给client
         q_result.put([frame_count, 2, datetime.now().strftime('%H:%M:%S.%f')[:-3]])
         print(datetime.now().strftime('%H:%M:%S.%f')[:-3], 'return result of ', frame_count, '\n')
-        # print('result of ', frame_count, 'is', r, '\n')
-        # c.shutdown(socket.SHUT_WR)
-        # c.close()
 
 
 def handle(clientsocket, q_frame_gpu0, index, c1, c2, worker_pid, q_result):
-    print("receiving length...")
+    print("receiving image length...")
     len_bytes = clientsocket.recv(4)
-    print(repr(len_bytes))
-    if len(len_bytes) == 0:
+    if len(len_bytes) == 0: # socket connection is closed
         return -1
+
     img_strlen = struct.unpack('>I', len_bytes)[0]
     q_result.put([index, 0, datetime.now().strftime('%H:%M:%S.%f')[:-3]])
     # print(datetime.now().strftime('%H:%M:%S.%f')[:-3], index, "the img's length: ", img_strlen)
     cur_size = 0
     img_str = bytes()
-    # tmp_size = 102400
     while cur_size < img_strlen:
-        tmp_str = clientsocket.recv(img_strlen - cur_size)  # 读取图片数据
+        tmp_str = clientsocket.recv(img_strlen - cur_size)
         img_str += tmp_str
         cur_size += len(tmp_str)
         # print(datetime.now().strftime('%H:%M:%S.%f')[:-3], index, "current size is: ", cur_size)
     # print(f"cur_size {cur_size}")
 
-    # send_handle(c2, clientsocket.fileno(), worker_pid)
     q_result.put([index, 1, datetime.now().strftime('%H:%M:%S.%f')[:-3]])
-    # print(datetime.now().strftime('%H:%M:%S.%f')[:-3], "handle_2(): snd the socket success")
 
     print(datetime.now().strftime('%H:%M:%S.%f')[:-3], 'put frame', index, 'to queue \n')
-    # infomation = append_image_info(img_str, index, clientsocket)
-    # print('put info to queue', infomation)
     q_frame_gpu0.put([img_str, index])
     return 0
 
@@ -337,14 +325,14 @@ def main():
     serversocket.bind((host, port))
 
     serversocket.listen(5)
-    print('begin to listen')
+    print('listening on port 10003...')
 
     index = 0
     while True:
+        print("receiving the client...")
         clientsocket, addr = serversocket.accept()
-        # print(datetime.now().strftime('%H:%M:%S.%f')[:-3], index, "socket accept: ", addr)  # 打印client的地址信息
+        # print(datetime.now().strftime('%H:%M:%S.%f')[:-3], index, "socket accept: ", addr)
 
-        # img_strlen = int.from_bytes(clientsocket.recv(4), byteorder='little')
         p = mp.Process(target=handler, args=(clientsocket, q_frame_gpu0, index, c1, c2, p2.pid, q_result))
         index += 1
         p.start()
