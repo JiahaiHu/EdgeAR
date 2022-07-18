@@ -37,6 +37,7 @@ public class MyTask extends Thread{
     public void run() {
         try {
             socket = new Socket(serverIP, serverPort);
+            socket.setTcpNoDelay(true);
         } catch (IOException e) {
             e.printStackTrace();
         }
