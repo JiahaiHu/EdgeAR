@@ -24,11 +24,11 @@ public class MyTask extends Thread{
     private Socket socket;
     private String logTimestamp;
 
-    public MyTask(String IP, int port, String path, int n, int fps) {
+    public MyTask(String IP, int port, String path, int t, int fps) {
         serverIP = IP;
         serverPort = port;
         imagePath = path;
-        numberOfFrames = n;
+        numberOfFrames = t * fps;
         interval = (int) 1000/fps;
         logTimestamp = "" + System.currentTimeMillis();
     }
@@ -58,12 +58,14 @@ public class MyTask extends Thread{
                         e.printStackTrace();
                     }
 
-                    int fileLength = (int) fileList[i].length();
-                    Log.d("frameSender", "image file path: " + fileList[i].toString());
+                    int numFiles = fileList.length;
+                    int j = i % numFiles; // not enough image files
+                    int fileLength = (int) fileList[j].length();
+                    Log.d("frameSender", "image file path: " + fileList[j].toString());
                     Log.d("frameSender", "image file size: " + fileLength);
 
                     // read image
-                    FileInputStream in =  new FileInputStream(fileList[i].toString());
+                    FileInputStream in =  new FileInputStream(fileList[j].toString());
                     byte[] buf = new byte[fileLength];
                     int len = in.read(buf, 0, fileLength);
                     Log.d("frameSender", "read return: " + len);
@@ -88,7 +90,7 @@ public class MyTask extends Thread{
                     in.close();
                 }
 
-                out.close();
+//                out.close();
                 Log.i("frameSender", "all frames are sent to server");
 
             } catch (IOException e) {
@@ -100,7 +102,7 @@ public class MyTask extends Thread{
         // receive result from server
         Thread resultReceiver = new Thread(() -> {
             try {
-                MyLog myLog = new MyLog("receive_" + logTimestamp);
+                MyLog myLog = new MyLog("recv_" + logTimestamp);
                 BufferedReader socket_in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
                 for (int i=0; i<numberOfFrames; i++) {
@@ -133,6 +135,8 @@ public class MyTask extends Thread{
                     myLog.writeFileToLog(timeMsg);
                 }
 
+                // close the inputstream of a socket
+                // also close the socket connection!!
                 socket_in.close();
             } catch (Exception e) {
                 e.printStackTrace();

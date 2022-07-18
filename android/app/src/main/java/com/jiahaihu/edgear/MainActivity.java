@@ -6,15 +6,11 @@ import androidx.core.app.ActivityCompat;
 import android.Manifest;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.concurrent.CountDownLatch;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -29,35 +25,24 @@ public class MainActivity extends AppCompatActivity {
         Button btn = findViewById(R.id.button);
         EditText ipInput = findViewById(R.id.IPInput);
         EditText portInput = findViewById(R.id.PortInput);
-        EditText numberInput = findViewById(R.id.numbersOfFrames);
+        EditText timeInput = findViewById(R.id.timeInput);
         EditText timeIntervalInput = findViewById(R.id.timeIntervalInput);
-
-        TextView textView = findViewById(R.id.textView);
 
         btn.setOnClickListener(view -> {
             String ip = ipInput.getText().toString();
             int port = Integer.parseInt(portInput.getText().toString());
-            int numberOfFrames = Integer.parseInt(numberInput.getText().toString());
+            int time = Integer.parseInt(timeInput.getText().toString());
             int fps = Integer.parseInt(timeIntervalInput.getText().toString());
 
             // Get the server's ip and port,
             // use the async methods to send the requests at a fixed interval
 
-            String displayString = ip + port + numberOfFrames;
-            textView.setText(displayString);
-
             Date nowTime = new Date();
             String now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(nowTime);
 
-            MyTask task = new MyTask(ip, port, "/Download/images", numberOfFrames, fps);
+            MyTask task = new MyTask(ip, port, "/Download/EdgeAR/images/ski", time, fps);
             task.start();
             Log.i("onClick", "task started");
-
-//            try {
-//                Thread.sleep(3000);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
 
             try {
                 task.join();
@@ -65,22 +50,6 @@ public class MainActivity extends AppCompatActivity {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-
-//                try {
-//                    Thread.sleep(1000);
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-
-            // arrange the logs
-//            try {
-//                MyLog.mergeFileLog(now);
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-
-//            Log.e("INFO: ", "onClick: merge logs finished");
-
         });
 
     }
