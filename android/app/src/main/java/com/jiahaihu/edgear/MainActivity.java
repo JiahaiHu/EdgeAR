@@ -29,27 +29,27 @@ public class MainActivity extends AppCompatActivity {
         EditText timeIntervalInput = findViewById(R.id.timeIntervalInput);
 
         btn.setOnClickListener(view -> {
+            btn.setEnabled(false);
+
             String ip = ipInput.getText().toString();
             int port = Integer.parseInt(portInput.getText().toString());
             int time = Integer.parseInt(timeInput.getText().toString());
             int fps = Integer.parseInt(timeIntervalInput.getText().toString());
 
-            // Get the server's ip and port,
-            // use the async methods to send the requests at a fixed interval
+            new Thread(() -> {
+                MyTask task = new MyTask(ip, port, "/Download/EdgeAR/images/ski", time, fps);
+                task.start();
+                Log.i("onClick", "task started");
 
-            Date nowTime = new Date();
-            String now = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS").format(nowTime);
+                try {
+                    task.join();
+                    Log.i("onClick", "task completed" );
+                    runOnUiThread(() -> btn.setEnabled(true));
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }).start();
 
-            MyTask task = new MyTask(ip, port, "/Download/EdgeAR/images/ski", time, fps);
-            task.start();
-            Log.i("onClick", "task started");
-
-            try {
-                task.join();
-                Log.i("onClick", "task completed" );
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
         });
 
     }
