@@ -248,17 +248,16 @@ def detect_frame_gpu0(q_frame_gpu0, c1, c2, q_result):
     while True:
         print("receiving the fd...")
         fd = recv_handle(c1)
-        print(f"get the fd {fd}")
+        # print(f"get the fd {fd}")
         c = socket.socket(socket.AF_INET, socket.SOCK_STREAM, fileno=fd)
 
         while True:
-            print(c.fileno())
-            print("getting frame from queue...")
+            print(datetime.now().strftime('%H:%M:%S.%f')[:-3], 'getting frame from queue...\n')
             [img_str, frame_count] = q_frame_gpu0.get(True)
-            if frame_count == -1:
+            print(datetime.now().strftime('%H:%M:%S.%f')[:-3], 'get frame', frame_count, '\n')
+            if frame_count == -1: # end of a connection
                 break
-            print("finish getting frame")
-            # print(datetime.now().strftime('%H:%M:%S.%f')[:-3], 'the queue receive frame', frame_count, '\n')
+
             img_array = np.fromstring(img_str, dtype='uint8')  # 转换成array
             img_decoded = cv2.imdecode(img_array, 1)  # 解压图片,img为array格式
 
@@ -272,12 +271,13 @@ def detect_frame_gpu0(q_frame_gpu0, c1, c2, q_result):
             str_rJsonLen_resolutionNum_imgID_rJson = bytes(r_json, encoding="utf8")
 
             c.send(str_rJsonLen_resolutionNum_imgID_rJson)  # 把识别结果返回给client
-            q_result.put([frame_count, 2, datetime.now().strftime('%H:%M:%S.%f')[:-3]])
             print(datetime.now().strftime('%H:%M:%S.%f')[:-3], 'return result of ', frame_count, '\n')
+            q_result.put([frame_count, 2, datetime.now().strftime('%H:%M:%S.%f')[:-3]])
+            # print(datetime.now().strftime('%H:%M:%S.%f')[:-3], 'return finished\n')
 
 
 def handle(clientsocket, q_frame_gpu0, index, c1, c2, worker_pid, q_result):
-    print("receiving image length...")
+    # print("receiving image length...")
     len_bytes = clientsocket.recv(4)
     if len(len_bytes) == 0: # socket connection is closed
         q_frame_gpu0.put([bytes(), -1]) # end of a sequence of frames
@@ -290,6 +290,7 @@ def handle(clientsocket, q_frame_gpu0, index, c1, c2, worker_pid, q_result):
     img_str = bytes()
     while cur_size < img_strlen:
         tmp_str = clientsocket.recv(img_strlen - cur_size)
+        clientsocket.setsockopt(socket.SOL_TCP, socket.TCP_QUICKACK, 0)
         img_str += tmp_str
         cur_size += len(tmp_str)
         # print(datetime.now().strftime('%H:%M:%S.%f')[:-3], index, "current size is: ", cur_size)
@@ -299,6 +300,8 @@ def handle(clientsocket, q_frame_gpu0, index, c1, c2, worker_pid, q_result):
 
     print(datetime.now().strftime('%H:%M:%S.%f')[:-3], 'put frame', index, 'to queue \n')
     q_frame_gpu0.put([img_str, index])
+    # print(datetime.now().strftime('%H:%M:%S.%f')[:-3], 'put finished\n')
+
     return 0
 
 def handler(clientsocket, q_frame_gpu0, index, c1, c2, worker_pid, q_result):
