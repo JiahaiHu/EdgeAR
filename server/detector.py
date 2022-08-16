@@ -282,8 +282,12 @@ def handle(clientsocket, q_frame_gpu0, index, c1, c2, worker_pid, q_result):
     if len(len_bytes) == 0: # socket connection is closed
         q_frame_gpu0.put([bytes(), -1]) # end of a sequence of frames
         return -1
+    if len(len_bytes) < 4: # edge case
+        len_bytes += clientsocket.recv(4-len(len_bytes))
 
+    print(len_bytes.hex())
     img_strlen = struct.unpack('>I', len_bytes)[0]
+    print(img_strlen)
     q_result.put([index, 0, datetime.now().strftime('%H:%M:%S.%f')[:-3]])
     # print(datetime.now().strftime('%H:%M:%S.%f')[:-3], index, "the img's length: ", img_strlen)
     cur_size = 0
@@ -327,6 +331,7 @@ def main():
     # p2.join()
 
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
     host = "0.0.0.0"
     port = 10003
@@ -340,7 +345,7 @@ def main():
         print("receiving the client...")
         clientsocket, addr = serversocket.accept()
         # print(datetime.now().strftime('%H:%M:%S.%f')[:-3], index, "socket accept: ", addr)
-
+        
         p = mp.Process(target=handler, args=(clientsocket, q_frame_gpu0, index, c1, c2, p2.pid, q_result))
         index += 1
         p.start()
